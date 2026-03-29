@@ -1,25 +1,52 @@
-# This Dockerfile is placed in the project root to satisfy cloud providers 
-# that don't support changing the "Root Directory" for deployment.
-# It automatically targets the backend-springboot source files.
+# ============================================================
+# Root Dockerfile — Single-container deployment
+# Builds both frontend and backend, serves everything from one
+# container with the backend Spring Boot app proxying the UI.
+# ============================================================
 
-FROM maven:3.9.6-eclipse-temurin-21 AS build
+# ── Stage 1: Build React Frontend ──
+FROM node:20-alpine AS frontend-build
+
+WORKDIR /app/frontend
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/ .
+RUN npm run build
+
+# ── Stage 2: Build Spring Boot Backend ──
+FROM maven:3.9.6-eclipse-temurin-17 AS backend-build
 
 WORKDIR /app
 
-# Copy the backend code into the container
 COPY backend/pom.xml .
+RUN mvn dependency:go-offline -B
+
 COPY backend/src ./src
 
-# Package the application
-RUN mvn clean package -DskipTests
+# Copy frontend build into Spring Boot static resources
+COPY --from=frontend-build /app/frontend/dist ./src/main/resources/static
 
-# Use smaller JDK image to run app
-FROM eclipse-temurin:21-jdk
+RUN mvn clean package -DskipTests -B
+
+# ── Stage 3: Production Runtime ──
+FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
-# Extract the built JAR
-COPY --from=build /app/target/*.jar app.jar
 
-EXPOSE 8000
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-ENTRYPOINT ["java","-jar","app.jar"]
+COPY --from=backend-build /app/target/*.jar app.jar
+
+RUN chown -R appuser:appgroup /app
+
+USER appuser
+
+EXPOSE 8081
+
+ENTRYPOINT ["java", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-jar", "app.jar"]

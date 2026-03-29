@@ -1,0 +1,9 @@
+target/
+.mvn/
+.git/
+.idea/
+.vscode/
+*.log
+*.txt
+build_log.txt
+error.txt
