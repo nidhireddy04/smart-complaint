@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8081/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://smart-complaint-rcdr.onrender.com/api';
 
 async function request(url, options = {}) {
   const res = await fetch(`${API_BASE}${url}`, {
