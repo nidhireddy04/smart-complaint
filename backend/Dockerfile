@@ -7,7 +7,7 @@ FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
 # Copy the backend code into the container
-COPY backendt/pom.xml .
+COPY backend/pom.xml .
 COPY backend/src ./src
 
 # Package the application
