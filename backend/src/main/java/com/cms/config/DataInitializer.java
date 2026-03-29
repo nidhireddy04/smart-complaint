@@ -5,6 +5,7 @@ import com.cms.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,8 +19,14 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired private NotificationRepository notificationRepository;
 
     @Override
+    @Transactional
     public void run(String... args) {
-        if (userRepository.count() > 0) return;
+        try {
+            if (userRepository.count() > 0) return;
+        } catch (Exception e) {
+            System.err.println("Database not ready during initialization: " + e.getMessage());
+            return;
+        }
 
         // ===================== SEED USERS =====================
         User admin = new User("Admin User", "admin@system.com", "admin123", User.Role.ADMIN, "Administration");
